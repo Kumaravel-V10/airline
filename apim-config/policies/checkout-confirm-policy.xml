@@ -1,0 +1,123 @@
+<!--
+    =====================================================================
+    Nevio Service Center – Checkout Confirm Operation Policy
+    =====================================================================
+
+    OPERATION : POST /checkoutConfirm
+    PURPOSE   : Transforms an incoming REST JSON body into a GraphQL
+                mutation payload targeting the Nevio Checkout API, then
+                extracts the ConfirmCheckout result from the response.
+
+    HOW TO APPLY IN AZURE PORTAL:
+      1. Navigate to Azure Portal → API Management → your APIM instance.
+      2. Click "APIs" → select the Nevio Checkout API.
+      3. Click the "POST /checkoutConfirm" operation.
+      4. Click the </> icon on the "Inbound processing" box.
+      5. Paste this entire XML into the policy editor.
+      6. Click "Save".
+
+    INCOMING REST BODY (example):
+      {
+        "checkoutId": "CHK-98765",
+        "paymentDetails": {
+          "paymentType": "CREDIT_CARD",
+          "cardNumber": "****1234"
+        }
+      }
+
+    The body is forwarded as the GraphQL $confirmRequest variable.
+    =====================================================================
+-->
+<policies>
+
+    <!-- ===============================================================
+         INBOUND – REST → GraphQL transformation
+         =============================================================== -->
+    <inbound>
+        <base />
+
+        <!-- ── Transform REST JSON body into GraphQL mutation payload ── -->
+        <set-body>@{
+            // Read the incoming REST JSON body
+            var body = context.Request.Body.As<JObject>(preserveContent: true);
+
+            // Build the GraphQL mutation string
+            var graphqlQuery = @"
+                mutation ConfirmCheckout($confirmRequest: CheckoutConfirmRequest!) {
+                    ConfirmCheckout(input: $confirmRequest) {
+                        orderId
+                        pnrId
+                        pricing {
+                            total { value currencyCode }
+                        }
+                        connections {
+                            origin { airportCode }
+                            destination { airportCode }
+                            departureDateTime
+                            flightNumber
+                        }
+                        passengers {
+                            id
+                            identityDetails {
+                                firstName
+                                lastName
+                            }
+                        }
+                        services {
+                            id
+                            name
+                            quantity
+                            pricing {
+                                total { value currencyCode }
+                            }
+                        }
+                    }
+                }";
+
+            // Compose the full GraphQL request payload
+            var graphqlPayload = new JObject(
+                new JProperty("query", graphqlQuery),
+                new JProperty("variables", new JObject(
+                    new JProperty("confirmRequest", body)
+                ))
+            );
+
+            return graphqlPayload.ToString();
+        }</set-body>
+    </inbound>
+
+    <!-- ===============================================================
+         BACKEND
+         =============================================================== -->
+    <backend>
+        <base />
+    </backend>
+
+    <!-- ===============================================================
+         OUTBOUND – Extract GraphQL data envelope
+         =============================================================== -->
+    <outbound>
+        <base />
+
+        <!-- ── Unwrap the GraphQL response to return only ConfirmCheckout ── -->
+        <!--
+            The GraphQL backend returns:
+              { "data": { "ConfirmCheckout": { ... } } }
+            This policy extracts data.ConfirmCheckout so the REST consumer
+            receives a clean response without the GraphQL wrapper.
+        -->
+        <set-body>@{
+            var response = context.Response.Body.As<JObject>(preserveContent: true);
+            var confirmCheckout = response["data"]?["ConfirmCheckout"];
+            return confirmCheckout != null ? confirmCheckout.ToString() : response.ToString();
+        }</set-body>
+    </outbound>
+
+    <!-- ===============================================================
+         ON-ERROR
+         =============================================================== -->
+    <on-error>
+        <base />
+    </on-error>
+
+</policies>

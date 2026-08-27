@@ -1,0 +1,625 @@
+query RetriveOrderRefundEligiblities($input: RefundEligiblitiesInput!) {
+
+  RetriveOrderRefundEligiblities(input: $input) {
+
+    type
+
+    data {
+
+      orderId
+
+      refundStatus
+
+      totalRefund {
+
+        totalRefundAmounts {
+
+          total {
+
+            value
+
+            currencyCode
+
+          }
+
+        }
+
+        totalPaidAmount {
+
+          total {
+
+            value
+
+            currencyCode
+
+          }
+
+        }
+
+        totalUsedAmount {
+
+          total {
+
+            value
+
+            currencyCode
+
+          }
+
+        }
+
+        totalPenalty {
+
+          total {
+
+            currencyCode
+
+            value
+
+          }
+
+        }
+
+      }
+
+      travelers {
+
+        travelerId
+
+        totalRefund {
+
+          totalRefundAmounts {
+
+            total {
+
+              value
+
+              currencyCode
+
+            }
+
+          }
+
+          totalPaidAmount {
+
+            total {
+
+              value
+
+              currencyCode
+
+            }
+
+          }
+
+          totalUsedAmount {
+
+            total {
+
+              value
+
+              currencyCode
+
+            }
+
+          }
+
+          totalPenalty {
+
+            total {
+
+              currencyCode
+
+              value
+
+            }
+
+          }
+
+        }
+
+        travelDocuments {
+
+          travelDocumentId
+
+          documentType
+
+          status
+
+          seatIds
+
+          serviceIds
+
+          refundAmounts {
+
+            base {
+
+              value
+
+              currencyCode
+
+            }
+
+            taxes {
+
+              value
+
+              currencyCode
+
+              code
+
+              category
+
+            }
+
+            totalTaxes {
+
+              value
+
+              currencyCode
+
+            }
+
+            total {
+
+              value
+
+              currencyCode
+
+            }
+
+          }
+
+          paidAmount {
+
+            base {
+
+              value
+
+              currencyCode
+
+            }
+
+            taxes {
+
+              value
+
+              currencyCode
+
+              code
+
+              category
+
+            }
+
+            totalRefundableTax {
+
+              value
+
+              currencyCode
+
+            }
+
+            total {
+
+              value
+
+              currencyCode
+
+            }
+
+          }
+
+          usedAmount {
+
+            base {
+
+              value
+
+              currencyCode
+
+            }
+
+            taxes {
+
+              value
+
+              currencyCode
+
+              code
+
+              category
+
+            }
+
+            totalRefundableTax {
+
+              value
+
+              currencyCode
+
+            }
+
+            total {
+
+              value
+
+              currencyCode
+
+            }
+
+          }
+
+          penalty {
+
+            value
+
+            currencyCode
+
+          }
+
+          refundMethodOptions {
+
+            id
+
+            paymentDetails {
+
+              paymentMethod {
+
+                paymentType
+
+                vendorCode
+
+                cardNumber
+
+                expiryDate
+
+              }
+
+              amount {
+
+                value
+
+                currencyCode
+
+              }
+
+            }
+
+          }
+
+        }
+
+      }
+
+      refundProposalReferences {
+
+        refundProposalId
+
+      }
+
+      nonEligibilityReasons {
+
+        code
+
+        title
+
+      }
+
+      dictionaries {
+
+        currency {
+
+          name
+
+          decimalPlaces
+
+        }
+
+      }
+
+    }
+
+  }
+
+}
+
+ 
+{
+  "input": {
+    "targetAction": "cancelAndRefund",
+    "orderId": "8LUTXS",
+    "lastName": "Ibrahim",
+    "isEligible": true
+  }
+}
+ 
+mutation CancellationAndRefund($input: CancellationAndRefundInput!) {
+
+  CancellationAndRefund(input: $input) {
+
+    orderId
+
+    totalRefund {
+
+      totalRefundAmounts {
+
+        total {
+
+          value
+
+          currencyCode
+
+        }
+
+      }
+
+      totalPaidAmount {
+
+        total {
+
+          value
+
+          currencyCode
+
+        }
+
+      }
+
+      totalUsedAmount {
+
+        total {
+
+          value
+
+          currencyCode
+
+        }
+
+      }
+
+    }
+
+    travelers {
+
+      travelerId
+
+      totalRefund {
+
+        totalRefundAmounts {
+
+          total {
+
+            value
+
+            currencyCode
+
+          }
+
+        }
+
+        totalPaidAmount {
+
+          total {
+
+            value
+
+            currencyCode
+
+          }
+
+        }
+
+        totalUsedAmount {
+
+          total {
+
+            value
+
+            currencyCode
+
+          }
+
+        }
+
+      }
+
+      travelDocuments {
+
+        travelDocumentId
+
+        documentType
+
+        status
+
+        refundAmounts {
+
+          base {
+
+            value
+
+            currencyCode
+
+          }
+
+          taxes {
+
+            value
+
+            currencyCode
+
+            code
+
+            category
+
+          }
+
+          totalTaxes {
+
+            value
+
+            currencyCode
+
+          }
+
+          total {
+
+            value
+
+            currencyCode
+
+          }
+
+        }
+
+        paidAmount {
+
+          base {
+
+            value
+
+            currencyCode
+
+          }
+
+          taxes {
+
+            value
+
+            currencyCode
+
+            code
+
+            category
+
+          }
+
+          totalRefundableTax {
+
+            value
+
+            currencyCode
+
+          }
+
+          total {
+
+            value
+
+            currencyCode
+
+          }
+
+        }
+
+        usedAmount {
+
+          base {
+
+            value
+
+            currencyCode
+
+          }
+
+          taxes {
+
+            value
+
+            currencyCode
+
+            code
+
+            category
+
+          }
+
+          totalRefundableTax {
+
+            value
+
+            currencyCode
+
+          }
+
+          total {
+
+            value
+
+            currencyCode
+
+          }
+
+        }
+
+        paymentDetails {
+
+          paymentMethod {
+
+            paymentType
+
+            vendorCode
+
+            cardNumber
+
+            expiryDate
+
+          }
+
+          amount {
+
+            value
+
+            currencyCode
+
+          }
+
+        }
+
+      }
+
+    }
+
+    dictionaries {
+
+      currency {
+
+        name
+
+        decimalPlaces
+
+      }
+
+    }
+
+    errors {
+
+      code
+
+      title
+
+      detail
+
+    }
+
+  }
+
+}
+ 
+ 
+{
+  "input": {
+    "refundProposalIds": ["1H2ZZZ_AOXXDV2ATGD4XIK9D1VFGEY2Q3R4"],
+    "orderId": "7QKLLB",
+    "lastName": "arjun"
+  }
+}
+ 
+{{APIM_URL}}/cancelAndRefund
+ 
+J Nagarjun
+{{APIM_URL}}/cancelAndRefund
+this is ulr
+ 
+http(s)://apim-aai-dev-neu-01.azure-api.net/cancelAndRefund
+ 

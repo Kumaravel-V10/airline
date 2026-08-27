@@ -1,0 +1,139 @@
+<!--
+    =====================================================================
+    Nevio Service Center – Global Inbound Policy (All APIs)
+    =====================================================================
+
+    PURPOSE:
+      This policy applies to EVERY API managed by Azure API Management.
+      It enforces authentication, rate-limiting, tracing, CORS, and
+      centralised audit logging via Azure Event Hub.
+
+    HOW TO APPLY IN AZURE PORTAL:
+      1. Navigate to Azure Portal → API Management → your APIM instance.
+      2. Click "APIs" in the left menu.
+      3. Select "All APIs" (the top-level entry, not an individual API).
+      4. Click the "Policies" tab (or the </> icon in the Inbound /
+         Outbound / Backend processing boxes).
+      5. Paste this entire XML into the policy editor.
+      6. Click "Save".
+
+    NAMED VALUES REQUIRED (create under APIM → Named values):
+      • azure-ad-tenant-id    – Your Azure AD tenant ID
+      • agent-client-id       – The registered application (client) ID
+                                 for the AI agent / caller
+      • nevio-jwt-token       – A pre-shared JWT used to authenticate
+                                 with the Nevio backend GraphQL service
+
+    LOGGER REQUIRED:
+      • mcp-logger            – An Event Hub logger configured under
+                                 APIM → Loggers, pointing to your
+                                 Azure Event Hub namespace / hub.
+    =====================================================================
+-->
+<policies>
+
+    <!-- ===============================================================
+         INBOUND – runs before the request reaches the backend
+         =============================================================== -->
+    <inbound>
+        <base />
+
+        <!-- ── 1. Validate Azure AD Token (Agent Identity) ────────── -->
+        <!--
+            Ensures the caller presents a valid Azure AD bearer token
+            issued by the correct tenant for the registered agent app.
+        -->
+        <validate-azure-ad-token tenant-id="{{azure-ad-tenant-id}}">
+            <client-application-ids>
+                <application-id>{{agent-client-id}}</application-id>
+            </client-application-ids>
+        </validate-azure-ad-token>
+
+        <!-- ── 2. Set Backend Authorization Header ────────────────── -->
+        <!--
+            Replace the incoming Authorization header with the Nevio
+            backend JWT so the GraphQL service accepts the request.
+        -->
+        <set-header name="Authorization" exists-action="override">
+            <value>Bearer {{nevio-jwt-token}}</value>
+        </set-header>
+
+        <!-- ── 3. Enforce Content-Type ────────────────────────────── -->
+        <set-header name="Content-Type" exists-action="override">
+            <value>application/json</value>
+        </set-header>
+
+        <!-- ── 4. Rate Limiting ───────────────────────────────────── -->
+        <!--
+            Allow a maximum of 100 calls per 60-second window per
+            subscription key. Adjust as needed for production traffic.
+        -->
+        <rate-limit calls="100" renewal-period="60" />
+
+        <!-- ── 5. Distributed Tracing Header ──────────────────────── -->
+        <!--
+            Propagate a unique trace ID so every backend call can be
+            correlated in logs and diagnostics.
+        -->
+        <set-header name="X-Trace-Id" exists-action="override">
+            <value>@(context.RequestId.ToString())</value>
+        </set-header>
+
+        <!-- ── 6. CORS – Allow All Origins ────────────────────────── -->
+        <!--
+            Permits cross-origin requests from any domain. Tighten
+            allowed-origins in production if required.
+        -->
+        <cors allow-credentials="true">
+            <allowed-origins>
+                <origin>*</origin>
+            </allowed-origins>
+            <allowed-methods preflight-result-max-age="300">
+                <method>*</method>
+            </allowed-methods>
+            <allowed-headers>
+                <header>*</header>
+            </allowed-headers>
+            <expose-headers>
+                <header>*</header>
+            </expose-headers>
+        </cors>
+    </inbound>
+
+    <!-- ===============================================================
+         BACKEND – proxy behaviour (inherit defaults)
+         =============================================================== -->
+    <backend>
+        <base />
+    </backend>
+
+    <!-- ===============================================================
+         OUTBOUND – runs after the backend responds
+         =============================================================== -->
+    <outbound>
+        <base />
+
+        <!-- ── Audit Logging to Event Hub ─────────────────────────── -->
+        <!--
+            Sends a structured JSON payload to the configured Event Hub
+            for every response, enabling centralised monitoring and
+            analytics across all Nevio APIs.
+        -->
+        <log-to-eventhub logger-id="mcp-logger">@{
+            return new JObject(
+                new JProperty("EventTime",     DateTime.UtcNow.ToString("o")),
+                new JProperty("OperationName", context.Operation.Id),
+                new JProperty("StatusCode",    context.Response.StatusCode),
+                new JProperty("RequestId",     context.RequestId.ToString())
+            ).ToString();
+        }</log-to-eventhub>
+    </outbound>
+
+    <!-- ===============================================================
+         ON-ERROR – fallback handling (inherit defaults)
+         =============================================================== -->
+    <on-error>
+        <base />
+    </on-error>
+
+</policies>

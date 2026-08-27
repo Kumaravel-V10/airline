@@ -1,0 +1,387 @@
+# =============================================================================
+# Cancel & Refund GraphQL Schema
+# =============================================================================
+#
+# Purpose:
+#   Defines the complete GraphQL SDL for the Cancel & Refund API.
+#   This schema covers two main operations:
+#     1. Query  – RetriveOrderRefundEligiblities: checks whether an order is
+#        eligible for a refund and returns detailed refund breakdown per
+#        traveler / travel-document.
+#     2. Mutation – CancellationAndRefund: executes the cancellation and
+#        triggers the refund based on previously retrieved refund proposals.
+#
+# How to import into Azure API Management (APIM) as Pass-through GraphQL:
+#   1. In the Azure Portal, navigate to your APIM instance.
+#   2. Go to APIs → + Add API → GraphQL.
+#   3. Select "Pass-through GraphQL" as the API type.
+#   4. Upload this .graphql file as the schema definition.
+#   5. Set the backend GraphQL endpoint URL (the upstream service).
+#   6. Configure authentication policies (e.g., subscription key, OAuth).
+#   7. Save and test the API from the APIM Test console.
+#
+# Notes:
+#   - Field names and type names intentionally match the upstream API contract.
+#   - Triple-quote (""") doc-strings provide inline documentation.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Root Query
+# ---------------------------------------------------------------------------
+
+"""
+Root Query type for the Cancel & Refund API.
+Use `RetriveOrderRefundEligiblities` to check refund eligibility for an order.
+"""
+type Query {
+  """
+  Retrieve refund eligibility details for a given order.
+  Returns a full breakdown of refundable amounts per traveler and travel document,
+  along with any non-eligibility reasons if the order cannot be refunded.
+  """
+  RetriveOrderRefundEligiblities(input: RefundEligiblitiesInput!): RefundEligibilityResponse
+}
+
+# ---------------------------------------------------------------------------
+# Root Mutation
+# ---------------------------------------------------------------------------
+
+"""
+Root Mutation type for the Cancel & Refund API.
+Use `CancellationAndRefund` to execute a cancellation and initiate the refund.
+"""
+type Mutation {
+  """
+  Execute a cancellation and refund for one or more refund proposals.
+  The refund proposal IDs are obtained from a prior eligibility query.
+  """
+  CancellationAndRefund(input: CancellationAndRefundInput!): CancellationRefundResponse
+}
+
+# ===========================================================================
+# Input Types
+# ===========================================================================
+
+"""
+Input for retrieving refund eligibility information.
+"""
+input RefundEligiblitiesInput {
+  """The target action to evaluate (e.g., "CANCEL")."""
+  targetAction: String!
+
+  """The unique order identifier."""
+  orderId: String!
+
+  """Last name of the primary traveler on the booking."""
+  lastName: String!
+
+  """Optional flag to pre-filter on eligibility status."""
+  isEligible: Boolean
+}
+
+"""
+Input for executing a cancellation and refund.
+"""
+input CancellationAndRefundInput {
+  """List of refund proposal IDs to process (from eligibility response)."""
+  refundProposalIds: [String!]!
+
+  """The unique order identifier."""
+  orderId: String!
+
+  """Last name of the primary traveler on the booking."""
+  lastName: String!
+}
+
+# ===========================================================================
+# Output Types – Refund Eligibility
+# ===========================================================================
+
+"""
+Top-level response wrapper for refund eligibility queries.
+"""
+type RefundEligibilityResponse {
+  """Discriminator or response type label."""
+  type: String
+
+  """The detailed eligibility data payload."""
+  data: RefundEligibilityData
+}
+
+"""
+Detailed refund eligibility data for an order.
+"""
+type RefundEligibilityData {
+  """The order identifier."""
+  orderId: String
+
+  """Overall refund status (e.g., "ELIGIBLE", "NOT_ELIGIBLE")."""
+  refundStatus: String
+
+  """Aggregated refund totals for the entire order."""
+  totalRefund: TotalRefund
+
+  """Per-traveler refund breakdown."""
+  travelers: [TravelerRefund]
+
+  """
+  References to refund proposals that can be used in the CancellationAndRefund mutation.
+  """
+  refundProposalReferences: [RefundProposalReference]
+
+  """Reasons why the order is not eligible for a refund, if applicable."""
+  nonEligibilityReasons: [NonEligibilityReason]
+}
+
+"""
+Aggregated refund totals across all travelers and documents.
+"""
+type TotalRefund {
+  """Breakdown of total refund amounts (base, taxes, etc.)."""
+  totalRefundAmounts: AmountWrapper
+
+  """Total amount originally paid."""
+  totalPaidAmount: AmountWrapper
+
+  """Total amount already used / consumed."""
+  totalUsedAmount: AmountWrapper
+
+  """Total penalty applied."""
+  totalPenalty: AmountWrapper
+}
+
+"""
+Wrapper that holds a single monetary total.
+"""
+type AmountWrapper {
+  """The monetary total."""
+  total: MoneyAmount
+}
+
+"""
+Represents a monetary value with its currency.
+"""
+type MoneyAmount {
+  """Numeric value of the amount."""
+  value: Float
+
+  """ISO 4217 currency code (e.g., "USD", "EUR")."""
+  currencyCode: String
+}
+
+"""
+Refund details scoped to a single traveler.
+"""
+type TravelerRefund {
+  """Unique traveler identifier within the order."""
+  travelerId: String
+
+  """Aggregated refund for this traveler."""
+  totalRefund: TotalRefund
+
+  """List of travel documents (tickets, EMDs, etc.) for this traveler."""
+  travelDocuments: [TravelDocument]
+}
+
+"""
+Refund information for a single travel document (ticket, EMD, etc.).
+"""
+type TravelDocument {
+  """Unique travel document identifier."""
+  travelDocumentId: String
+
+  """Type of the document (e.g., "TICKET", "EMD")."""
+  documentType: String
+
+  """Current status of the document."""
+  status: String
+
+  """Detailed refund amount breakdown for this document."""
+  refundAmounts: DetailedAmounts
+
+  """Amount originally paid for this document."""
+  paidAmount: PaidAmount
+
+  """Penalty amount applied to this document."""
+  penalty: MoneyAmount
+
+  """Available refund method options for this document."""
+  refundMethodOptions: [RefundMethodOption]
+}
+
+"""
+Fully detailed amount breakdown including base fare, individual taxes, and totals.
+"""
+type DetailedAmounts {
+  """Base fare amount."""
+  base: MoneyAmount
+
+  """Individual tax line items."""
+  taxes: [TaxAmount]
+
+  """Sum of all taxes."""
+  totalTaxes: MoneyAmount
+
+  """Grand total (base + taxes)."""
+  total: MoneyAmount
+}
+
+"""
+A single tax line item.
+"""
+type TaxAmount {
+  """Numeric value of the tax."""
+  value: Float
+
+  """ISO 4217 currency code."""
+  currencyCode: String
+
+  """Tax code (e.g., "YQ", "US")."""
+  code: String
+
+  """Tax category or description."""
+  category: String
+}
+
+"""
+Amount originally paid, broken into base and total.
+"""
+type PaidAmount {
+  """Base fare paid."""
+  base: MoneyAmount
+
+  """Total amount paid (base + taxes)."""
+  total: MoneyAmount
+}
+
+"""
+A refund method option describing how the refund can be issued.
+"""
+type RefundMethodOption {
+  """Unique identifier for this refund method option."""
+  id: String
+
+  """Payment details associated with this refund method."""
+  paymentDetails: [PaymentDetail]
+}
+
+"""
+Details of a payment instrument used for refund.
+"""
+type PaymentDetail {
+  """The payment method / instrument."""
+  paymentMethod: PaymentMethod
+
+  """The refund amount for this payment method."""
+  amount: MoneyAmount
+}
+
+"""
+Describes a payment method / instrument.
+"""
+type PaymentMethod {
+  """Type of payment (e.g., "CREDIT_CARD", "CASH")."""
+  paymentType: String
+
+  """Vendor or card brand code (e.g., "VI", "CA")."""
+  vendorCode: String
+
+  """Masked card number."""
+  cardNumber: String
+
+  """Card expiry date (MM/YY or YYYY-MM)."""
+  expiryDate: String
+}
+
+"""
+Reference to a refund proposal returned by the eligibility query.
+"""
+type RefundProposalReference {
+  """Unique refund proposal identifier – pass this to CancellationAndRefund."""
+  refundProposalId: String
+}
+
+"""
+Reason why an order or document is not eligible for a refund.
+"""
+type NonEligibilityReason {
+  """Machine-readable reason code."""
+  code: String
+
+  """Human-readable title / summary of the reason."""
+  title: String
+}
+
+# ===========================================================================
+# Output Types – Cancellation & Refund
+# ===========================================================================
+
+"""
+Response returned after executing a cancellation and refund.
+"""
+type CancellationRefundResponse {
+  """The order identifier."""
+  orderId: String
+
+  """Aggregated refund totals after cancellation."""
+  totalRefund: RefundTotal
+
+  """Per-traveler cancellation results."""
+  travelers: [TravelerCancellation]
+
+  """Errors encountered during the cancellation process, if any."""
+  errors: [RefundError]
+}
+
+"""
+Cancellation result scoped to a single traveler.
+"""
+type TravelerCancellation {
+  """Unique traveler identifier."""
+  travelerId: String
+
+  """Cancelled travel documents for this traveler."""
+  travelDocuments: [CancelledDocument]
+}
+
+"""
+A travel document that has been cancelled.
+"""
+type CancelledDocument {
+  """Unique travel document identifier."""
+  travelDocumentId: String
+
+  """Type of the document (e.g., "TICKET", "EMD")."""
+  documentType: String
+
+  """Post-cancellation status of the document."""
+  status: String
+
+  """Refund amounts issued for this document."""
+  refundAmounts: DetailedAmounts
+
+  """Payment details describing how the refund was issued."""
+  paymentDetails: [PaymentDetail]
+}
+
+"""
+Simple refund total used in the cancellation response.
+"""
+type RefundTotal {
+  """Total refunded amount."""
+  total: MoneyAmount
+}
+
+"""
+Error encountered during the cancellation and refund process.
+"""
+type RefundError {
+  """Machine-readable error code."""
+  code: String
+
+  """Short error title."""
+  title: String
+
+  """Detailed error description."""
+  detail: String
+}

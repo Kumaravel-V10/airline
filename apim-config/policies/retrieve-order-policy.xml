@@ -1,0 +1,158 @@
+<!--
+    =====================================================================
+    Nevio Service Center – Retrieve Order Operation Policy
+    =====================================================================
+
+    OPERATION : POST /orders/retrieve
+    PURPOSE   : Transforms an incoming REST JSON body into a GraphQL
+                query payload targeting the Nevio Order API, extracts
+                the orderId from the request body, and returns the
+                unwrapped retrieveOrder result.
+
+    HOW TO APPLY IN AZURE PORTAL:
+      1. Navigate to Azure Portal → API Management → your APIM instance.
+      2. Click "APIs" → select the Nevio Orders API.
+      3. Click the "POST /orders/retrieve" operation.
+      4. Click the </> icon on the "Inbound processing" box.
+      5. Paste this entire XML into the policy editor.
+      6. Click "Save".
+
+    INCOMING REST BODY (example):
+      {
+        "orderId": "ORD-2026-ABC123"
+      }
+
+    The orderId is extracted and passed as the GraphQL $orderId variable.
+    =====================================================================
+-->
+<policies>
+
+    <!-- ===============================================================
+         INBOUND – REST → GraphQL transformation
+         =============================================================== -->
+    <inbound>
+        <base />
+
+        <!-- ── Transform REST JSON body into GraphQL query payload ── -->
+        <!--
+            Extracts the orderId from the incoming JSON body and maps
+            it to the $orderId variable in the GraphQL query.
+        -->
+        <set-body>@{
+            // Read the incoming REST JSON body and extract orderId
+            var body = context.Request.Body.As<JObject>(preserveContent: true);
+            var orderId = body["orderId"]?.ToString();
+
+            // Build the GraphQL query string
+            var graphqlQuery = @"
+                query retrieveOrder($orderId: String) {
+                    retrieveOrder(orderId: $orderId) {
+                        id
+                        pnrId
+                        status
+                        pricing {
+                            total { value currencyCode }
+                            base  { value currencyCode }
+                            taxes { value currencyCode }
+                        }
+                        connections {
+                            origin {
+                                airportCode
+                                airportName
+                            }
+                            destination {
+                                airportCode
+                                airportName
+                            }
+                            departureDateTime
+                            arrivalDateTime
+                            flightNumber
+                            cabinType
+                            status
+                        }
+                        passengers {
+                            id
+                            passengerTypeCode
+                            identityDetails {
+                                firstName
+                                lastName
+                                gender
+                                dateOfBirth
+                                title
+                            }
+                        }
+                        services {
+                            id
+                            name
+                            quantity
+                            pricing {
+                                total { value currencyCode }
+                            }
+                        }
+                        seats {
+                            passengerId
+                            flightId
+                            seatNumber
+                            pricing {
+                                total { value currencyCode }
+                            }
+                        }
+                        eligibilities {
+                            cancel
+                            cancelAndRefund
+                            change
+                        }
+                        paymentInfo {
+                            paymentType
+                            amount { value currencyCode }
+                        }
+                    }
+                }";
+
+            // Compose the full GraphQL request payload
+            var graphqlPayload = new JObject(
+                new JProperty("query", graphqlQuery),
+                new JProperty("variables", new JObject(
+                    new JProperty("orderId", orderId)
+                ))
+            );
+
+            return graphqlPayload.ToString();
+        }</set-body>
+    </inbound>
+
+    <!-- ===============================================================
+         BACKEND
+         =============================================================== -->
+    <backend>
+        <base />
+    </backend>
+
+    <!-- ===============================================================
+         OUTBOUND – Extract GraphQL data envelope
+         =============================================================== -->
+    <outbound>
+        <base />
+
+        <!-- ── Unwrap the GraphQL response to return only retrieveOrder ── -->
+        <!--
+            The GraphQL backend returns:
+              { "data": { "retrieveOrder": { ... } } }
+            This policy extracts data.retrieveOrder so the REST consumer
+            receives a clean response without the GraphQL wrapper.
+        -->
+        <set-body>@{
+            var response = context.Response.Body.As<JObject>(preserveContent: true);
+            var retrieveOrder = response["data"]?["retrieveOrder"];
+            return retrieveOrder != null ? retrieveOrder.ToString() : response.ToString();
+        }</set-body>
+    </outbound>
+
+    <!-- ===============================================================
+         ON-ERROR
+         =============================================================== -->
+    <on-error>
+        <base />
+    </on-error>
+
+</policies>

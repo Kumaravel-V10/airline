@@ -1,0 +1,1703 @@
+openapi: 3.0.3
+info:
+  title: Nevio Service Center API
+  version: 1.0.0
+  description: |
+    REST API facades for the Nevio Service Center airline system (Airline Code: AY).
+
+    This specification defines clean REST-style interfaces for Azure API Management (APIM) import.
+    All backend operations are implemented as GraphQL-over-POST, but are exposed here as
+    conventional REST endpoints for tooling compatibility and MCP server generation.
+
+    ## Overview
+
+    The API supports the full airline booking lifecycle:
+    - **Authentication**: Obtain JWT and Amadeus tokens for secure API access.
+    - **Shopping**: Search flights, retrieve search panel configuration, and browse available services.
+    - **Booking**: Create carts, add passengers, select seats and ancillary services, and confirm checkout.
+    - **Order Management**: Retrieve confirmed orders with full details including eligibilities for cancel, refund, and change.
+
+    ## Airline Code
+    All operations are scoped to airline code **AY** (Finnair).
+  contact:
+    name: Nevio Service Center API Support
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://nevioservicecenterapim.azure-api.net
+    description: Azure APIM Gateway – Production
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Authentication
+    description: Endpoints for obtaining JWT and Amadeus authentication tokens.
+  - name: Shopping
+    description: Endpoints for searching flights, retrieving search panel configuration, and browsing the service catalogue.
+  - name: Booking
+    description: Endpoints for creating carts, adding passengers, selecting seats and services, and confirming checkout.
+  - name: Services
+    description: Endpoints for retrieving ancillary service catalogues and managing seat and service selections.
+  - name: Orders
+    description: Endpoints for retrieving confirmed orders and their complete details.
+
+paths:
+  # ──────────────────────────────────────────────
+  # 1. Authentication
+  # ──────────────────────────────────────────────
+  /token:
+    post:
+      operationId: getJwtToken
+      summary: Get JWT Token
+      description: |
+        Obtain a JWT authentication token for API access.
+
+        Provide your client credentials (clientId and clientSecret) to receive a signed JWT token.
+        This token must be included as a Bearer token in the Authorization header of all subsequent
+        API requests. Tokens have a limited lifetime and should be refreshed before expiry.
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JwtTokenRequest'
+            example:
+              clientId: "my-app-client-id"
+              clientSecret: "my-app-client-secret"
+      responses:
+        '200':
+          description: JWT token successfully issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JwtTokenResponse'
+              example:
+                token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /token/amadeus:
+    post:
+      operationId: getAmadeusToken
+      summary: Get Amadeus Token
+      description: |
+        Obtain an Amadeus backend API token using the JWT access token.
+
+        This endpoint exchanges a valid JWT access token for an Amadeus-specific token
+        that is required by certain backend services. The Amadeus token is used internally
+        for downstream airline system integration.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AmadeusTokenRequest'
+            example:
+              accessToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: Amadeus token successfully issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmadeusTokenResponse'
+              example:
+                amadeusToken: "amadeus-token-value-abc123..."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ──────────────────────────────────────────────
+  # 2. Shopping
+  # ──────────────────────────────────────────────
+  /searchpanel:
+    post:
+      operationId: getSearchPanel
+      summary: Get Search Panel Config
+      description: |
+        Get search panel configuration including airports, passenger types, fare types,
+        cabin classes, countries, and promotion codes for airline AY.
+
+        This endpoint returns all the reference data needed to populate a flight search UI,
+        including:
+        - **Airports**: List of supported origin and destination airports with IATA codes.
+        - **Passenger Types**: Supported passenger categories (Adult, Child, Infant, Youth).
+        - **Fare Types**: Available fare families and their descriptions.
+        - **Cabin Classes**: Economy, Premium Economy, Business, First.
+        - **Countries**: Supported countries with ISO codes.
+        - **Promotion Codes**: Currently active promotion codes.
+      tags:
+        - Shopping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchPanelRequest'
+            example:
+              airlinecode: "AY"
+      responses:
+        '200':
+          description: Search panel configuration returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchPanelResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /shop/flights:
+    post:
+      operationId: searchFlights
+      summary: Search Flights
+      description: |
+        Search available flights by origin, destination, dates, passenger count, and cabin class.
+        Returns flight offers with airBoundId, pricing, and schedules.
+
+        This is the primary flight shopping endpoint. Provide trip details including:
+        - **Trip type**: One-way or round-trip.
+        - **Trip legs**: Origin/destination pairs with departure dates.
+        - **Passengers**: Number and type of passengers with optional discount codes.
+        - **Fare types**: Preferred fare families to filter results.
+
+        The response contains an array of air bounds, each representing a bookable flight option
+        with complete pricing, schedule, and availability information. Each air bound includes
+        a unique `airBoundId` that is used to create a shopping cart.
+      tags:
+        - Shopping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlightSearchRequest'
+            example:
+              tripType: "roundTrip"
+              trips:
+                - departureLocationCode: "HEL"
+                  arrivalLocationCode: "LHR"
+                  departureDateTime: "2026-09-15"
+                  isRequestedBound: true
+                - departureLocationCode: "LHR"
+                  arrivalLocationCode: "HEL"
+                  departureDateTime: "2026-09-22"
+                  isRequestedBound: true
+              passengers:
+                - passengerTypeCode: "ADT"
+                  discountCode: ""
+              fareTypes:
+                - "economy"
+      responses:
+        '200':
+          description: Flight search results returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlightSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ──────────────────────────────────────────────
+  # 3. Booking
+  # ──────────────────────────────────────────────
+  /create-cart:
+    post:
+      operationId: createCart
+      summary: Create Shopping Cart
+      description: |
+        Create a shopping cart with selected flight offer(s). Returns cartId and checkoutId
+        for subsequent booking operations.
+
+        After searching for flights, use the `skuIds` (derived from air bound selections) to
+        add one or more flight offers to a new shopping cart. The response includes:
+        - **cartId**: Unique identifier for the shopping cart.
+        - **checkoutId**: Identifier used for all subsequent booking operations (adding passengers,
+          selecting seats, confirming checkout).
+
+        The `airlineId` and `agentId` parameters identify the airline context and booking agent.
+      tags:
+        - Booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCartRequest'
+            example:
+              skuIds:
+                - "sku-abc123-outbound"
+                - "sku-def456-inbound"
+              airlineId: "AY"
+              agentId: "agent-001"
+      responses:
+        '200':
+          description: Shopping cart created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /checkout/passengers:
+    post:
+      operationId: addUpdatePassengers
+      summary: Add/Update Passengers
+      description: |
+        Add or update passenger details (name, date of birth, gender, contact information)
+        in the shopping cart. Used for both initial passenger entry and contact updates.
+
+        This endpoint accepts a list of passengers with their full identity and contact details.
+        Each passenger must include:
+        - **Identity Details**: First name, last name, gender, title, date of birth, and name type.
+        - **Contact Details**: Email, mobile phone (with country code), and optional postal address.
+
+        Call this endpoint after creating a cart and before confirming checkout. You can call it
+        multiple times to update passenger information. The `checkoutId` ties the passengers
+        to the active shopping cart session.
+      tags:
+        - Booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddUpdatePassengersRequest'
+            example:
+              checkoutId: "checkout-789xyz"
+              passengers:
+                - id: "pax-1"
+                  passengerTypeCode: "ADT"
+                  identityDetails:
+                    firstName: "John"
+                    lastName: "Doe"
+                    gender: "MALE"
+                    nameType: "LEGAL"
+                    dateOfBirth: "1985-03-15"
+                    title: "MR"
+                  contactDetails:
+                    email: "john.doe@example.com"
+                    mobile:
+                      countryCode: "+358"
+                      number: "401234567"
+                    address:
+                      street: "123 Main Street"
+                      city: "Helsinki"
+                      countryCode: "FI"
+                      postalCode: "00100"
+      responses:
+        '200':
+          description: Passenger details added or updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassengerUpdateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /cart/retrieve:
+    post:
+      operationId: retrieveCart
+      summary: Retrieve Cart
+      description: |
+        Retrieve current shopping cart contents including passengers, selected services,
+        seats, and total pricing breakdown.
+
+        Use this endpoint to get the full state of an active shopping cart at any point
+        during the booking flow. The response includes:
+        - **Flight segments**: Selected outbound and inbound flights with schedules.
+        - **Passengers**: All added passengers with their details.
+        - **Services**: Selected ancillary services (baggage, meals, etc.).
+        - **Seats**: Assigned seat selections per passenger per segment.
+        - **Pricing**: Itemized pricing breakdown including base fare, taxes, service charges,
+          and total amount.
+      tags:
+        - Booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetrieveCartRequest'
+            example:
+              checkoutId: "checkout-789xyz"
+      responses:
+        '200':
+          description: Cart contents retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Cart not found for the given checkoutId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /checkoutConfirm:
+    post:
+      operationId: checkoutConfirm
+      summary: Checkout Confirm
+      description: |
+        Finalize the booking and create an order. Issues a PNR (record locator).
+        Returns orderId, PNR, confirmed pricing, and passenger details.
+
+        This is the final step in the booking flow. After all passengers have been added
+        and optional services/seats selected, call this endpoint to:
+        - **Confirm the booking**: Lock in the selected flights, fares, and services.
+        - **Issue a PNR**: Generate a Passenger Name Record (record locator) for the booking.
+        - **Create an order**: Transition the cart into a confirmed order with a unique orderId.
+
+        The response includes the PNR, orderId, confirmed itinerary, final pricing, and
+        all passenger details. The orderId can be used with the retrieve order endpoint
+        for future reference.
+
+        **Important**: This action is irreversible. Ensure all passenger and service details
+        are correct before confirming.
+      tags:
+        - Booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutConfirmRequest'
+            example:
+              checkoutID: "checkout-789xyz"
+      responses:
+        '200':
+          description: Booking confirmed and order created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutConfirmResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Checkout conflict – cart may have expired or already been confirmed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ──────────────────────────────────────────────
+  # 4. Services
+  # ──────────────────────────────────────────────
+  /services:
+    post:
+      operationId: getServiceCatalogue
+      summary: Get Service Catalogue
+      description: |
+        Get available ancillary services (extra baggage, meals, lounge access, WiFi) with pricing.
+        Use promotionCode SCUISEATP for seat promotions.
+
+        This endpoint returns the full catalogue of purchasable ancillary services available
+        for the flights in the cart or confirmed order. Each service includes:
+        - **Service type**: Baggage, meal, lounge, WiFi, insurance, priority boarding, etc.
+        - **Pricing**: Per-passenger and per-segment pricing with currency.
+        - **Availability**: Which segments and passenger types the service applies to.
+        - **Service IDs**: Unique identifiers used to add services via the manage seat/services endpoint.
+
+        You can query by either `checkoutId` (pre-booking) or `orderId` (post-booking).
+        Pass a `promotionCode` to retrieve promotional pricing for eligible services.
+      tags:
+        - Services
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceCatalogueRequest'
+            example:
+              checkoutId: "checkout-789xyz"
+              promotionCode: "SCUISEATP"
+              promotionAirlineCode: "AY"
+      responses:
+        '200':
+          description: Service catalogue returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceCatalogueResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /seat/services:
+    post:
+      operationId: manageSeatServices
+      summary: Add or Remove Seats/Services
+      description: |
+        Add or remove seats, baggage, meals, or other ancillary services to/from a cart
+        or confirmed order. Supports add service, delete service, add seat, delete seat,
+        and post-order operations.
+
+        This is a versatile endpoint that handles all service and seat management operations:
+        - **addService**: Add an ancillary service (baggage, meal, lounge, etc.) to the cart or order.
+        - **deleteService**: Remove a previously added ancillary service.
+        - **addSeat**: Assign a specific seat to a passenger on a flight segment.
+        - **deleteSeat**: Remove a seat assignment from a passenger.
+
+        For pre-booking operations, provide `checkoutId`. For post-booking modifications,
+        provide `orderId`. The `traveller` array specifies which passengers the operation
+        applies to, and `serviceIds` or `seatIds` identify the specific services or seats.
+      tags:
+        - Services
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManageSeatServicesRequest'
+            example:
+              checkoutId: "checkout-789xyz"
+              action: "addSeat"
+              traveller:
+                - passengerId: "pax-1"
+                  segmentId: "seg-outbound-1"
+              seatIds:
+                - "12A"
+      responses:
+        '200':
+          description: Seat or service operation completed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManageSeatServicesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Cart, order, service, or seat not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /seatmap:
+    post:
+      operationId: getSeatMap
+      summary: Get Seat Map
+      description: |
+        Get the seat map layout for a specific flight showing available, occupied, and
+        premium seats with pricing.
+
+        Returns a detailed cabin layout including:
+        - **Deck and cabin structure**: Rows, columns, and cabin class boundaries.
+        - **Seat details**: Seat number, availability status, seat type (window, middle, aisle),
+          and associated amenities.
+        - **Pricing**: Per-seat pricing for paid seat selection, including promotional pricing
+          when a valid promotionCode is provided.
+        - **Restrictions**: Seats blocked for operational reasons, exit row requirements, etc.
+
+        Query by `checkoutId` (pre-booking) or `orderId` (post-booking) along with
+        the specific `flightId` to retrieve the seat map for.
+      tags:
+        - Services
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeatMapRequest'
+            example:
+              checkoutId: "checkout-789xyz"
+              flightId: "AY-1234-20260915"
+              promotionCode: "SCUISEATP"
+      responses:
+        '200':
+          description: Seat map returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeatMapResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ──────────────────────────────────────────────
+  # 5. Orders
+  # ──────────────────────────────────────────────
+  /orders/retrieve:
+    post:
+      operationId: retrieveOrder
+      summary: Retrieve Order
+      description: |
+        Retrieve a confirmed order by PNR/orderId. Returns complete order details including
+        flight segments, passengers, services, seats, payment information, and order
+        eligibilities (cancel, refund, change).
+
+        The response provides a comprehensive view of the confirmed booking:
+        - **Order metadata**: orderId, PNR (record locator), booking date, order status.
+        - **Flight segments**: Full itinerary with flight numbers, times, airports, and status.
+        - **Passengers**: All traveler details as submitted during booking.
+        - **Services**: Purchased ancillary services with pricing.
+        - **Seats**: Confirmed seat assignments per passenger per segment.
+        - **Payment**: Payment method, amount charged, currency, and transaction references.
+        - **Eligibilities**: Available post-booking actions such as cancel, refund, voluntary
+          change, and involuntary change with associated conditions and deadlines.
+      tags:
+        - Orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetrieveOrderRequest'
+            example:
+              orderId: "order-abc123"
+      responses:
+        '200':
+          description: Order details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Order not found for the given orderId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+# ════════════════════════════════════════════════
+# Components
+# ════════════════════════════════════════════════
+components:
+  # ── Security Schemes ─────────────────────────
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT Bearer token obtained from the /token endpoint.
+        Include in the Authorization header as: Bearer <token>
+
+  # ── Reusable Schemas ─────────────────────────
+  schemas:
+    # ── Shared / Reusable Types ────────────────
+    MoneyAmount:
+      type: object
+      description: Represents a monetary amount with currency.
+      properties:
+        amount:
+          type: number
+          format: double
+          description: The monetary value.
+          example: 249.99
+        currency:
+          type: string
+          description: ISO 4217 currency code.
+          example: "EUR"
+          minLength: 3
+          maxLength: 3
+      required:
+        - amount
+        - currency
+
+    PassengerInfo:
+      type: object
+      description: Complete passenger information including identity and contact details.
+      properties:
+        id:
+          type: string
+          description: Unique passenger identifier within the booking context.
+          example: "pax-1"
+        passengerTypeCode:
+          type: string
+          description: Passenger category type.
+          enum:
+            - ADT
+            - CHD
+            - INF
+            - YTH
+          example: "ADT"
+        identityDetails:
+          $ref: '#/components/schemas/IdentityDetails'
+        contactDetails:
+          $ref: '#/components/schemas/ContactDetails'
+      required:
+        - id
+        - passengerTypeCode
+        - identityDetails
+
+    IdentityDetails:
+      type: object
+      description: Passenger identity information.
+      properties:
+        firstName:
+          type: string
+          description: Passenger's first (given) name.
+          example: "John"
+        lastName:
+          type: string
+          description: Passenger's last (family) name.
+          example: "Doe"
+        gender:
+          type: string
+          description: Passenger's gender.
+          enum:
+            - MALE
+            - FEMALE
+            - OTHER
+          example: "MALE"
+        nameType:
+          type: string
+          description: Type of the name (legal, preferred, etc.).
+          example: "LEGAL"
+        dateOfBirth:
+          type: string
+          format: date
+          description: Passenger's date of birth in ISO 8601 format (YYYY-MM-DD).
+          example: "1985-03-15"
+        title:
+          type: string
+          description: Passenger's title or salutation.
+          enum:
+            - MR
+            - MRS
+            - MS
+            - MISS
+            - DR
+          example: "MR"
+      required:
+        - firstName
+        - lastName
+        - gender
+        - dateOfBirth
+
+    ContactDetails:
+      type: object
+      description: Passenger contact information.
+      properties:
+        email:
+          type: string
+          format: email
+          description: Passenger's email address.
+          example: "john.doe@example.com"
+        mobile:
+          $ref: '#/components/schemas/PhoneNumber'
+        address:
+          $ref: '#/components/schemas/PostalAddress'
+      required:
+        - email
+        - mobile
+
+    PhoneNumber:
+      type: object
+      description: Phone number with international country code.
+      properties:
+        countryCode:
+          type: string
+          description: International dialing code (e.g., +358).
+          example: "+358"
+        number:
+          type: string
+          description: Phone number without country code.
+          example: "401234567"
+      required:
+        - countryCode
+        - number
+
+    PostalAddress:
+      type: object
+      description: Postal/mailing address.
+      properties:
+        street:
+          type: string
+          description: Street address line.
+          example: "123 Main Street"
+        city:
+          type: string
+          description: City or locality name.
+          example: "Helsinki"
+        countryCode:
+          type: string
+          description: ISO 3166-1 alpha-2 country code.
+          example: "FI"
+          minLength: 2
+          maxLength: 2
+        postalCode:
+          type: string
+          description: Postal or ZIP code.
+          example: "00100"
+
+    FlightSegment:
+      type: object
+      description: A single flight segment within an itinerary.
+      properties:
+        segmentId:
+          type: string
+          description: Unique segment identifier.
+          example: "seg-outbound-1"
+        flightNumber:
+          type: string
+          description: Airline flight number.
+          example: "AY1234"
+        departureAirport:
+          type: string
+          description: IATA code of departure airport.
+          example: "HEL"
+        arrivalAirport:
+          type: string
+          description: IATA code of arrival airport.
+          example: "LHR"
+        departureDateTime:
+          type: string
+          format: date-time
+          description: Scheduled departure date and time in ISO 8601 format.
+          example: "2026-09-15T08:30:00Z"
+        arrivalDateTime:
+          type: string
+          format: date-time
+          description: Scheduled arrival date and time in ISO 8601 format.
+          example: "2026-09-15T10:45:00Z"
+        cabinClass:
+          type: string
+          description: Cabin class for this segment.
+          example: "ECONOMY"
+        status:
+          type: string
+          description: Current status of the flight segment.
+          example: "CONFIRMED"
+
+    TravellerReference:
+      type: object
+      description: Reference to a specific traveller and optional segment for service/seat operations.
+      properties:
+        passengerId:
+          type: string
+          description: Passenger identifier.
+          example: "pax-1"
+        segmentId:
+          type: string
+          description: Flight segment identifier.
+          example: "seg-outbound-1"
+
+    ErrorResponse:
+      type: object
+      description: Standard error response body.
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code.
+              example: "INVALID_REQUEST"
+            message:
+              type: string
+              description: Human-readable error message.
+              example: "The request body is missing required fields."
+            details:
+              type: array
+              description: Additional error details or field-level validation errors.
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    description: The field that caused the error.
+                  reason:
+                    type: string
+                    description: Description of the validation failure.
+
+    # ── Request Schemas ────────────────────────
+    JwtTokenRequest:
+      type: object
+      description: Request body for JWT token authentication.
+      properties:
+        clientId:
+          type: string
+          description: Client application identifier.
+        clientSecret:
+          type: string
+          description: Client application secret.
+          format: password
+      required:
+        - clientId
+        - clientSecret
+
+    AmadeusTokenRequest:
+      type: object
+      description: Request body for Amadeus token exchange.
+      properties:
+        accessToken:
+          type: string
+          description: Valid JWT access token obtained from the /token endpoint.
+      required:
+        - accessToken
+
+    SearchPanelRequest:
+      type: object
+      description: Request body for search panel configuration retrieval.
+      properties:
+        airlinecode:
+          type: string
+          description: IATA airline code (e.g., AY for Finnair).
+          example: "AY"
+      required:
+        - airlinecode
+
+    FlightSearchRequest:
+      type: object
+      description: Request body for flight availability search.
+      properties:
+        tripType:
+          type: string
+          description: Type of trip.
+          enum:
+            - oneWay
+            - roundTrip
+          example: "roundTrip"
+        trips:
+          type: array
+          description: Array of trip legs defining origin, destination, and departure date.
+          items:
+            $ref: '#/components/schemas/TripLeg'
+          minItems: 1
+          maxItems: 6
+        passengers:
+          type: array
+          description: Array of passenger types and counts for the search.
+          items:
+            $ref: '#/components/schemas/PassengerSearchInfo'
+          minItems: 1
+        fareTypes:
+          type: array
+          description: Preferred fare type filters (e.g., economy, business).
+          items:
+            type: string
+      required:
+        - tripType
+        - trips
+        - passengers
+
+    TripLeg:
+      type: object
+      description: A single leg of a trip with origin, destination, and date.
+      properties:
+        departureLocationCode:
+          type: string
+          description: IATA airport code for departure.
+          example: "HEL"
+          minLength: 3
+          maxLength: 3
+        arrivalLocationCode:
+          type: string
+          description: IATA airport code for arrival.
+          example: "LHR"
+          minLength: 3
+          maxLength: 3
+        departureDateTime:
+          type: string
+          format: date
+          description: Departure date in ISO 8601 format (YYYY-MM-DD).
+          example: "2026-09-15"
+        isRequestedBound:
+          type: boolean
+          description: Indicates whether this leg is the currently requested search bound.
+          default: true
+      required:
+        - departureLocationCode
+        - arrivalLocationCode
+        - departureDateTime
+
+    PassengerSearchInfo:
+      type: object
+      description: Passenger type information for flight search.
+      properties:
+        passengerTypeCode:
+          type: string
+          description: Passenger category type code.
+          enum:
+            - ADT
+            - CHD
+            - INF
+            - YTH
+          example: "ADT"
+        discountCode:
+          type: string
+          description: Optional discount or promo code for the passenger.
+          example: ""
+      required:
+        - passengerTypeCode
+
+    CreateCartRequest:
+      type: object
+      description: Request body for creating a shopping cart with selected flight offers.
+      properties:
+        skuIds:
+          type: array
+          description: Array of SKU identifiers for selected flight offers (derived from airBoundId).
+          items:
+            type: string
+          minItems: 1
+        airlineId:
+          type: string
+          description: Airline IATA code.
+          example: "AY"
+        agentId:
+          type: string
+          description: Booking agent identifier.
+          example: "agent-001"
+      required:
+        - skuIds
+        - airlineId
+
+    AddUpdatePassengersRequest:
+      type: object
+      description: Request body for adding or updating passenger details in the shopping cart.
+      properties:
+        checkoutId:
+          type: string
+          description: Checkout session identifier.
+        passengers:
+          type: array
+          description: Array of passenger details to add or update.
+          items:
+            $ref: '#/components/schemas/PassengerInfo'
+          minItems: 1
+      required:
+        - checkoutId
+        - passengers
+
+    RetrieveCartRequest:
+      type: object
+      description: Request body for retrieving cart contents.
+      properties:
+        checkoutId:
+          type: string
+          description: Checkout session identifier.
+      required:
+        - checkoutId
+
+    ServiceCatalogueRequest:
+      type: object
+      description: Request body for retrieving the ancillary service catalogue.
+      properties:
+        checkoutId:
+          type: string
+          description: Checkout session identifier (for pre-booking). Provide either checkoutId or orderId.
+        orderId:
+          type: string
+          description: Confirmed order identifier (for post-booking). Provide either checkoutId or orderId.
+        promotionCode:
+          type: string
+          description: Promotion code for discounted service pricing (e.g., SCUISEATP for seat promotions).
+          example: "SCUISEATP"
+        promotionAirlineCode:
+          type: string
+          description: Airline code associated with the promotion.
+          example: "AY"
+
+    ManageSeatServicesRequest:
+      type: object
+      description: Request body for adding or removing seats and ancillary services.
+      properties:
+        checkoutId:
+          type: string
+          description: Checkout session identifier (for pre-booking operations).
+        orderId:
+          type: string
+          description: Order identifier (for post-booking modifications).
+        action:
+          type: string
+          description: The operation to perform.
+          enum:
+            - addService
+            - deleteService
+            - addSeat
+            - deleteSeat
+          example: "addSeat"
+        traveller:
+          type: array
+          description: Array of traveller references specifying which passengers and segments the action applies to.
+          items:
+            $ref: '#/components/schemas/TravellerReference'
+        serviceIds:
+          type: array
+          description: Array of service identifiers for add/delete service operations.
+          items:
+            type: string
+        seatIds:
+          type: array
+          description: Array of seat identifiers (e.g., "12A") for add/delete seat operations.
+          items:
+            type: string
+      required:
+        - action
+
+    SeatMapRequest:
+      type: object
+      description: Request body for retrieving a flight seat map.
+      properties:
+        checkoutId:
+          type: string
+          description: Checkout session identifier (for pre-booking).
+        orderId:
+          type: string
+          description: Order identifier (for post-booking seat changes).
+        flightId:
+          type: string
+          description: Unique flight identifier to retrieve the seat map for.
+          example: "AY-1234-20260915"
+        promotionCode:
+          type: string
+          description: Promotion code for discounted seat pricing.
+          example: "SCUISEATP"
+      required:
+        - flightId
+
+    CheckoutConfirmRequest:
+      type: object
+      description: Request body for confirming checkout and creating an order.
+      properties:
+        checkoutID:
+          type: string
+          description: Checkout session identifier to confirm.
+      required:
+        - checkoutID
+
+    RetrieveOrderRequest:
+      type: object
+      description: Request body for retrieving a confirmed order.
+      properties:
+        orderId:
+          type: string
+          description: Unique order identifier or PNR (record locator).
+      required:
+        - orderId
+
+    # ── Response Schemas ───────────────────────
+    JwtTokenResponse:
+      type: object
+      description: JWT token response.
+      properties:
+        token:
+          type: string
+          description: Signed JWT access token.
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    AmadeusTokenResponse:
+      type: object
+      description: Amadeus token response.
+      properties:
+        amadeusToken:
+          type: string
+          description: Amadeus backend API token.
+          example: "amadeus-token-value-abc123..."
+
+    SearchPanelResponse:
+      type: object
+      description: Search panel configuration data.
+      properties:
+        airports:
+          type: array
+          description: Available airports with IATA codes and names.
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                description: IATA airport code.
+                example: "HEL"
+              name:
+                type: string
+                description: Airport name.
+                example: "Helsinki-Vantaa"
+              city:
+                type: string
+                description: City name.
+                example: "Helsinki"
+              country:
+                type: string
+                description: Country name.
+                example: "Finland"
+        passengerTypes:
+          type: array
+          description: Supported passenger type codes and descriptions.
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                example: "ADT"
+              description:
+                type: string
+                example: "Adult (12+)"
+        fareTypes:
+          type: array
+          description: Available fare families.
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                example: "LIGHT"
+              description:
+                type: string
+                example: "Light fare – hand baggage only"
+        cabinClasses:
+          type: array
+          description: Available cabin classes.
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                example: "ECONOMY"
+              description:
+                type: string
+                example: "Economy Class"
+        countries:
+          type: array
+          description: Supported countries.
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                example: "FI"
+              name:
+                type: string
+                example: "Finland"
+        promotionCodes:
+          type: array
+          description: Currently active promotion codes.
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                example: "SUMMER2026"
+              description:
+                type: string
+                example: "Summer 2026 promotion – 10% off"
+
+    FlightSearchResponse:
+      type: object
+      description: Flight search results containing available air bounds.
+      properties:
+        airBounds:
+          type: array
+          description: Array of available flight options (air bounds) matching the search criteria.
+          items:
+            $ref: '#/components/schemas/AirBound'
+
+    AirBound:
+      type: object
+      description: A single bookable flight option with pricing and schedule information.
+      properties:
+        airBoundId:
+          type: string
+          description: Unique identifier for this air bound, used to create a shopping cart.
+          example: "ab-hel-lhr-20260915-001"
+        segments:
+          type: array
+          description: Flight segments comprising this air bound.
+          items:
+            $ref: '#/components/schemas/FlightSegment'
+        fareFamilyName:
+          type: string
+          description: Name of the fare family.
+          example: "Classic"
+        cabinClass:
+          type: string
+          description: Cabin class for this offer.
+          example: "ECONOMY"
+        totalPrice:
+          $ref: '#/components/schemas/MoneyAmount'
+        pricePerPassenger:
+          type: array
+          description: Price breakdown per passenger type.
+          items:
+            type: object
+            properties:
+              passengerTypeCode:
+                type: string
+                example: "ADT"
+              basePrice:
+                $ref: '#/components/schemas/MoneyAmount'
+              taxes:
+                $ref: '#/components/schemas/MoneyAmount'
+              total:
+                $ref: '#/components/schemas/MoneyAmount'
+        availableSeats:
+          type: integer
+          description: Number of remaining seats at this fare.
+          example: 9
+        skuId:
+          type: string
+          description: SKU identifier used for cart creation.
+          example: "sku-abc123-outbound"
+
+    CreateCartResponse:
+      type: object
+      description: Response after creating a shopping cart.
+      properties:
+        cartId:
+          type: string
+          description: Unique shopping cart identifier.
+          example: "cart-001-xyz"
+        checkoutId:
+          type: string
+          description: Checkout session identifier for subsequent booking operations.
+          example: "checkout-789xyz"
+        expiresAt:
+          type: string
+          format: date-time
+          description: Cart expiration timestamp. The cart must be confirmed before this time.
+          example: "2026-09-15T09:30:00Z"
+        selectedFlights:
+          type: array
+          description: Summary of selected flights in the cart.
+          items:
+            $ref: '#/components/schemas/FlightSegment'
+        totalPrice:
+          $ref: '#/components/schemas/MoneyAmount'
+
+    PassengerUpdateResponse:
+      type: object
+      description: Response after adding or updating passenger details.
+      properties:
+        checkoutId:
+          type: string
+          description: Checkout session identifier.
+        passengers:
+          type: array
+          description: Updated list of passengers in the cart.
+          items:
+            $ref: '#/components/schemas/PassengerInfo'
+        status:
+          type: string
+          description: Status of the passenger update operation.
+          example: "UPDATED"
+
+    CartResponse:
+      type: object
+      description: Full shopping cart state including flights, passengers, services, and pricing.
+      properties:
+        cartId:
+          type: string
+          description: Shopping cart identifier.
+        checkoutId:
+          type: string
+          description: Checkout session identifier.
+        expiresAt:
+          type: string
+          format: date-time
+          description: Cart expiration timestamp.
+        flights:
+          type: array
+          description: Selected flight segments.
+          items:
+            $ref: '#/components/schemas/FlightSegment'
+        passengers:
+          type: array
+          description: Passengers added to the cart.
+          items:
+            $ref: '#/components/schemas/PassengerInfo'
+        services:
+          type: array
+          description: Selected ancillary services.
+          items:
+            type: object
+            properties:
+              serviceId:
+                type: string
+                description: Service identifier.
+              serviceName:
+                type: string
+                description: Display name of the service.
+              serviceType:
+                type: string
+                description: Category of service.
+              passengerId:
+                type: string
+                description: Passenger this service is assigned to.
+              segmentId:
+                type: string
+                description: Segment this service applies to.
+              price:
+                $ref: '#/components/schemas/MoneyAmount'
+        seats:
+          type: array
+          description: Assigned seat selections.
+          items:
+            type: object
+            properties:
+              seatNumber:
+                type: string
+                example: "12A"
+              passengerId:
+                type: string
+              segmentId:
+                type: string
+              price:
+                $ref: '#/components/schemas/MoneyAmount'
+        pricing:
+          $ref: '#/components/schemas/PricingBreakdown'
+
+    PricingBreakdown:
+      type: object
+      description: Itemized pricing breakdown for the booking.
+      properties:
+        baseFare:
+          $ref: '#/components/schemas/MoneyAmount'
+        taxes:
+          $ref: '#/components/schemas/MoneyAmount'
+        serviceCharges:
+          $ref: '#/components/schemas/MoneyAmount'
+        seatCharges:
+          $ref: '#/components/schemas/MoneyAmount'
+        totalAmount:
+          $ref: '#/components/schemas/MoneyAmount'
+
+    ServiceCatalogueResponse:
+      type: object
+      description: Available ancillary services with pricing.
+      properties:
+        services:
+          type: array
+          description: Array of available ancillary services.
+          items:
+            type: object
+            properties:
+              serviceId:
+                type: string
+                description: Unique service identifier for add/remove operations.
+                example: "svc-bag-23kg-001"
+              serviceName:
+                type: string
+                description: Display name of the service.
+                example: "Extra Checked Bag (23kg)"
+              serviceType:
+                type: string
+                description: Service category.
+                enum:
+                  - BAGGAGE
+                  - MEAL
+                  - LOUNGE
+                  - WIFI
+                  - INSURANCE
+                  - PRIORITY_BOARDING
+                  - SEAT
+                  - OTHER
+                example: "BAGGAGE"
+              description:
+                type: string
+                description: Detailed description of the service.
+                example: "One additional checked bag up to 23kg"
+              price:
+                $ref: '#/components/schemas/MoneyAmount'
+              promotionalPrice:
+                $ref: '#/components/schemas/MoneyAmount'
+              applicableSegments:
+                type: array
+                description: Flight segments this service can be purchased for.
+                items:
+                  type: string
+              applicablePassengerTypes:
+                type: array
+                description: Passenger types eligible for this service.
+                items:
+                  type: string
+
+    ManageSeatServicesResponse:
+      type: object
+      description: Response after managing seats or services.
+      properties:
+        status:
+          type: string
+          description: Result status of the operation.
+          example: "SUCCESS"
+        action:
+          type: string
+          description: The action that was performed.
+          enum:
+            - addService
+            - deleteService
+            - addSeat
+            - deleteSeat
+        updatedPricing:
+          $ref: '#/components/schemas/PricingBreakdown'
+        message:
+          type: string
+          description: Human-readable result message.
+          example: "Seat 12A assigned to passenger pax-1 on segment seg-outbound-1."
+
+    SeatMapResponse:
+      type: object
+      description: Seat map layout for a specific flight.
+      properties:
+        flightId:
+          type: string
+          description: Flight identifier.
+          example: "AY-1234-20260915"
+        cabins:
+          type: array
+          description: Array of cabin sections in the aircraft.
+          items:
+            type: object
+            properties:
+              cabinClass:
+                type: string
+                description: Cabin class name.
+                example: "ECONOMY"
+              rows:
+                type: array
+                description: Rows in this cabin section.
+                items:
+                  type: object
+                  properties:
+                    rowNumber:
+                      type: integer
+                      description: Row number.
+                      example: 12
+                    seats:
+                      type: array
+                      description: Seats in this row.
+                      items:
+                        type: object
+                        properties:
+                          seatNumber:
+                            type: string
+                            description: Full seat designation.
+                            example: "12A"
+                          seatType:
+                            type: string
+                            description: Position type of the seat.
+                            enum:
+                              - WINDOW
+                              - MIDDLE
+                              - AISLE
+                            example: "WINDOW"
+                          available:
+                            type: boolean
+                            description: Whether the seat is available for selection.
+                            example: true
+                          price:
+                            $ref: '#/components/schemas/MoneyAmount'
+                          promotionalPrice:
+                            $ref: '#/components/schemas/MoneyAmount'
+                          characteristics:
+                            type: array
+                            description: Special characteristics of the seat.
+                            items:
+                              type: string
+                            example:
+                              - "EXTRA_LEGROOM"
+                              - "EXIT_ROW"
+
+    CheckoutConfirmResponse:
+      type: object
+      description: Response after confirming checkout and creating an order.
+      properties:
+        orderId:
+          type: string
+          description: Unique confirmed order identifier.
+          example: "order-abc123"
+        pnr:
+          type: string
+          description: Passenger Name Record (record locator) for the booking.
+          example: "XYZ789"
+        bookingDate:
+          type: string
+          format: date-time
+          description: Date and time the booking was confirmed.
+          example: "2026-09-10T14:30:00Z"
+        orderStatus:
+          type: string
+          description: Current status of the order.
+          example: "CONFIRMED"
+        flights:
+          type: array
+          description: Confirmed flight segments.
+          items:
+            $ref: '#/components/schemas/FlightSegment'
+        passengers:
+          type: array
+          description: Confirmed passenger details.
+          items:
+            $ref: '#/components/schemas/PassengerInfo'
+        totalPrice:
+          $ref: '#/components/schemas/MoneyAmount'
+
+    OrderResponse:
+      type: object
+      description: Complete confirmed order details.
+      properties:
+        orderId:
+          type: string
+          description: Unique order identifier.
+          example: "order-abc123"
+        pnr:
+          type: string
+          description: Passenger Name Record (record locator).
+          example: "XYZ789"
+        bookingDate:
+          type: string
+          format: date-time
+          description: Date and time the booking was created.
+        orderStatus:
+          type: string
+          description: Current order status.
+          enum:
+            - CONFIRMED
+            - CANCELLED
+            - PARTIALLY_CANCELLED
+            - COMPLETED
+          example: "CONFIRMED"
+        flights:
+          type: array
+          description: All flight segments in the order.
+          items:
+            $ref: '#/components/schemas/FlightSegment'
+        passengers:
+          type: array
+          description: All passengers on the order.
+          items:
+            $ref: '#/components/schemas/PassengerInfo'
+        services:
+          type: array
+          description: Purchased ancillary services.
+          items:
+            type: object
+            properties:
+              serviceId:
+                type: string
+              serviceName:
+                type: string
+              serviceType:
+                type: string
+              passengerId:
+                type: string
+              segmentId:
+                type: string
+              price:
+                $ref: '#/components/schemas/MoneyAmount'
+        seats:
+          type: array
+          description: Confirmed seat assignments.
+          items:
+            type: object
+            properties:
+              seatNumber:
+                type: string
+              passengerId:
+                type: string
+              segmentId:
+                type: string
+              price:
+                $ref: '#/components/schemas/MoneyAmount'
+        payment:
+          type: object
+          description: Payment information for the order.
+          properties:
+            method:
+              type: string
+              description: Payment method used.
+              example: "CREDIT_CARD"
+            amountCharged:
+              $ref: '#/components/schemas/MoneyAmount'
+            transactionReference:
+              type: string
+              description: Payment processor transaction reference.
+              example: "txn-ref-456"
+        pricing:
+          $ref: '#/components/schemas/PricingBreakdown'
+        eligibilities:
+          type: object
+          description: Available post-booking actions and their conditions.
+          properties:
+            cancel:
+              type: object
+              properties:
+                eligible:
+                  type: boolean
+                  description: Whether the order can be cancelled.
+                deadline:
+                  type: string
+                  format: date-time
+                  description: Cancellation deadline.
+                penalty:
+                  $ref: '#/components/schemas/MoneyAmount'
+            refund:
+              type: object
+              properties:
+                eligible:
+                  type: boolean
+                  description: Whether the order is eligible for a refund.
+                refundableAmount:
+                  $ref: '#/components/schemas/MoneyAmount'
+                refundType:
+                  type: string
+                  enum:
+                    - FULL
+                    - PARTIAL
+                    - VOUCHER
+            change:
+              type: object
+              properties:
+                eligible:
+                  type: boolean
+                  description: Whether the order can be voluntarily changed.
+                changeFee:
+                  $ref: '#/components/schemas/MoneyAmount'
+
+  # ── Reusable Responses ───────────────────────
+  responses:
+    BadRequest:
+      description: Bad request – invalid or missing parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized – missing or invalid authentication credentials.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error – an unexpected error occurred.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

@@ -1,0 +1,124 @@
+<!--
+    =====================================================================
+    Nevio Service Center – GraphQL Validation Policy
+    (Cancel & Refund API)
+    =====================================================================
+
+    PURPOSE:
+      This policy enforces GraphQL-specific validation and authorization
+      for the Cancel & Refund API. It limits query depth and payload
+      size to prevent abuse, and restricts access to only the approved
+      Query and Mutation operations.
+
+    HOW TO APPLY IN AZURE PORTAL:
+      1. Navigate to Azure Portal → API Management → your APIM instance.
+      2. Click "APIs" → select the Nevio Cancel & Refund API.
+      3. You can apply this at the API level (all operations) or at a
+         specific operation level:
+         - API level:  Click the API name → "Policies" tab.
+         - Operation:  Click the specific operation → </> icon.
+      4. Paste this entire XML into the policy editor.
+      5. Click "Save".
+
+    NOTES:
+      • max-depth=10  – Prevents deeply nested queries that could
+                         cause excessive backend processing.
+      • max-size=10240 – Limits the GraphQL request body to 10 KB
+                         to prevent oversized payloads.
+      • Only the following operations are authorized:
+          - Query:    RetriveOrderRefundEligiblities
+          - Mutation: CancellationAndRefund
+        Any other query or mutation will be rejected with 403 Forbidden.
+
+    REQUIREMENTS:
+      • The API must be imported as a GraphQL API (synthetic or
+        pass-through) in APIM for validate-graphql-request to work.
+      • Ensure the GraphQL schema is uploaded under the API definition.
+    =====================================================================
+-->
+<policies>
+
+    <!-- ===============================================================
+         INBOUND – GraphQL validation and authorization
+         =============================================================== -->
+    <inbound>
+        <base />
+
+        <!-- ── Validate GraphQL Request ───────────────────────────── -->
+        <!--
+            Validates the incoming GraphQL request against the schema
+            and enforces depth and size constraints to protect the
+            backend from abusive or malformed queries.
+        -->
+        <validate-graphql-request error-variable-name="graphql-validation-error"
+                                  max-depth="10"
+                                  max-size="10240">
+
+            <!-- ── Authorization Rules ────────────────────────────── -->
+            <!--
+                Restrict which GraphQL operations callers are allowed
+                to execute. Only the listed Query and Mutation types
+                are permitted; all others are denied by default.
+            -->
+            <authorize>
+                <!-- Allow querying refund eligibility for an order -->
+                <rule path="/Query/RetriveOrderRefundEligiblities"
+                      action="allow" />
+
+                <!-- Allow executing the cancellation and refund mutation -->
+                <rule path="/Mutation/CancellationAndRefund"
+                      action="allow" />
+            </authorize>
+
+        </validate-graphql-request>
+    </inbound>
+
+    <!-- ===============================================================
+         BACKEND
+         =============================================================== -->
+    <backend>
+        <base />
+    </backend>
+
+    <!-- ===============================================================
+         OUTBOUND
+         =============================================================== -->
+    <outbound>
+        <base />
+    </outbound>
+
+    <!-- ===============================================================
+         ON-ERROR – Handle GraphQL validation failures
+         =============================================================== -->
+    <on-error>
+        <base />
+
+        <!-- ── Return a structured error if validation failed ─────── -->
+        <!--
+            If the GraphQL validation policy set an error variable,
+            return a 400 Bad Request with details about the failure.
+        -->
+        <choose>
+            <when condition="@(context.Variables.ContainsKey("graphql-validation-error"))">
+                <return-response>
+                    <set-status code="400" reason="Bad Request" />
+                    <set-header name="Content-Type" exists-action="override">
+                        <value>application/json</value>
+                    </set-header>
+                    <set-body>@{
+                        var error = (string)context.Variables["graphql-validation-error"];
+                        return new JObject(
+                            new JProperty("error", "GraphQL Validation Failed"),
+                            new JProperty("details", error),
+                            new JProperty("allowedOperations", new JArray(
+                                "Query/RetriveOrderRefundEligiblities",
+                                "Mutation/CancellationAndRefund"
+                            ))
+                        ).ToString();
+                    }</set-body>
+                </return-response>
+            </when>
+        </choose>
+    </on-error>
+
+</policies>

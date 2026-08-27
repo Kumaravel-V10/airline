@@ -1,0 +1,323 @@
+{
+    "data": {
+        "RetriveOrderRefundEligiblities": {
+            "system": "pss",
+            "data": {
+                "orderId": "9DVWPJ",
+                "refundStatus": "refundable",
+                "totalRefund": {
+                    "totalRefundAmounts": {
+                        "total": {
+                            "value": 219.96,
+                            "currencyCode": "EUR"
+                        }
+                    },
+                    "totalPaidAmount": {
+                        "total": {
+                            "value": 181,
+                            "currencyCode": "EUR"
+                        }
+                    },
+                    "totalUsedAmount": {
+                        "total": {
+                            "value": 0,
+                            "currencyCode": "EUR"
+                        }
+                    },
+                    "totalPenalty": {
+                        "total": {
+                            "currencyCode": "EUR",
+                            "value": 0
+                        }
+                    }
+                },
+                "travelers": [
+                    {
+                        "travelerId": "PT2",
+                        "totalRefund": {
+                            "totalRefundAmounts": {
+                                "total": {
+                                    "value": 122.48,
+                                    "currencyCode": "EUR"
+                                }
+                            },
+                            "totalPaidAmount": {
+                                "total": {
+                                    "value": 103,
+                                    "currencyCode": "EUR"
+                                }
+                            },
+                            "totalUsedAmount": {
+                                "total": {
+                                    "value": 0,
+                                    "currencyCode": "EUR"
+                                }
+                            },
+                            "totalPenalty": {
+                                "total": {
+                                    "currencyCode": "EUR",
+                                    "value": 0
+                                }
+                            }
+                        },
+                        "travelDocuments": [
+                            {
+                                "travelDocumentId": "1052550456780",
+                                "documentType": "eticket",
+                                "status": "refundable",
+                                "seatIds": [],
+                                "serviceIds": [],
+                                "refundAmounts": {
+                                    "base": {
+                                        "value": 103,
+                                        "currencyCode": "EUR"
+                                    },
+                                    "taxes": [
+                                        {
+                                            "value": 6.27,
+                                            "currencyCode": "EUR",
+                                            "code": "DQ",
+                                            "category": ""
+                                        },
+                                        {
+                                            "value": 12.31,
+                                            "currencyCode": "EUR",
+                                            "code": "FI",
+                                            "category": ""
+                                        },
+                                        {
+                                            "value": 0.9,
+                                            "currencyCode": "EUR",
+                                            "code": "XU",
+                                            "category": ""
+                                        }
+                                    ],
+                                    "totalTaxes": {
+                                        "value": 19.48,
+                                        "currencyCode": "EUR"
+                                    },
+                                    "total": {
+                                        "value": 122.48,
+                                        "currencyCode": "EUR"
+                                    }
+                                },
+                                "paidAmount": {
+                                    "base": {
+                                        "value": 103,
+                                        "currencyCode": "EUR"
+                                    },
+                                    "taxes": [
+                                        {
+                                            "value": 6.27,
+                                            "currencyCode": "EUR",
+                                            "code": "DQ",
+                                            "category": ""
+                                        },
+                                        {
+                                            "value": 12.31,
+                                            "currencyCode": "EUR",
+                                            "code": "FI",
+                                            "category": ""
+                                        },
+                                        {
+                                            "value": 0.9,
+                                            "currencyCode": "EUR",
+                                            "code": "XU",
+                                            "category": ""
+                                        }
+                                    ],
+                                    "totalRefundableTax": null,
+                                    "total": {
+                                        "value": 103,
+                                        "currencyCode": "EUR"
+                                    }
+                                },
+                                "usedAmount": {
+                                    "base": {
+                                        "value": 0,
+                                        "currencyCode": "EUR"
+                                    },
+                                    "taxes": [],
+                                    "totalRefundableTax": null,
+                                    "total": {
+                                        "value": 0,
+                                        "currencyCode": "EUR"
+                                    }
+                                },
+                                "penalty": {
+                                    "value": 0,
+                                    "currencyCode": "EUR"
+                                },
+                                "refundMethodOptions": [
+                                    {
+                                        "id": "1052550456780-DEFAULT",
+                                        "paymentDetails": [
+                                            {
+                                                "paymentMethod": {
+                                                    "paymentType": "PaymentCard",
+                                                    "vendorCode": "CA",
+                                                    "cardNumber": "XXXXXXXXXXXX1096",
+                                                    "expiryDate": null
+                                                },
+                                                "amount": {
+                                                    "value": 122.48,
+                                                    "currencyCode": "EUR"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "travelerId": "PT1",
+                        "totalRefund": {
+                            "totalRefundAmounts": {
+                                "total": {
+                                    "value": 97.48,
+                                    "currencyCode": "EUR"
+                                }
+                            },
+                            "totalPaidAmount": {
+                                "total": {
+                                    "value": 78,
+                                    "currencyCode": "EUR"
+                                }
+                            },
+                            "totalUsedAmount": {
+                                "total": {
+                                    "value": 0,
+                                    "currencyCode": "EUR"
+                                }
+                            },
+                            "totalPenalty": {
+                                "total": {
+                                    "currencyCode": "EUR",
+                                    "value": 0
+                                }
+                            }
+                        },
+                        "travelDocuments": [
+                            {
+                                "travelDocumentId": "1052550456781",
+                                "documentType": "eticket",
+                                "status": "refundable",
+                                "seatIds": [],
+                                "serviceIds": [],
+                                "refundAmounts": {
+                                    "base": {
+                                        "value": 78,
+                                        "currencyCode": "EUR"
+                                    },
+                                    "taxes": [
+                                        {
+                                            "value": 6.27,
+                                            "currencyCode": "EUR",
+                                            "code": "DQ",
+                                            "category": ""
+                                        },
+                                        {
+                                            "value": 12.31,
+                                            "currencyCode": "EUR",
+                                            "code": "FI",
+                                            "category": ""
+                                        },
+                                        {
+                                            "value": 0.9,
+                                            "currencyCode": "EUR",
+                                            "code": "XU",
+                                            "category": ""
+                                        }
+                                    ],
+                                    "totalTaxes": {
+                                        "value": 19.48,
+                                        "currencyCode": "EUR"
+                                    },
+                                    "total": {
+                                        "value": 97.48,
+                                        "currencyCode": "EUR"
+                                    }
+                                },
+                                "paidAmount": {
+                                    "base": {
+                                        "value": 78,
+                                        "currencyCode": "EUR"
+                                    },
+                                    "taxes": [
+                                        {
+                                            "value": 6.27,
+                                            "currencyCode": "EUR",
+                                            "code": "DQ",
+                                            "category": ""
+                                        },
+                                        {
+                                            "value": 12.31,
+                                            "currencyCode": "EUR",
+                                            "code": "FI",
+                                            "category": ""
+                                        },
+                                        {
+                                            "value": 0.9,
+                                            "currencyCode": "EUR",
+                                            "code": "XU",
+                                            "category": ""
+                                        }
+                                    ],
+                                    "totalRefundableTax": null,
+                                    "total": {
+                                        "value": 78,
+                                        "currencyCode": "EUR"
+                                    }
+                                },
+                                "usedAmount": {
+                                    "base": {
+                                        "value": 0,
+                                        "currencyCode": "EUR"
+                                    },
+                                    "taxes": [],
+                                    "totalRefundableTax": null,
+                                    "total": {
+                                        "value": 0,
+                                        "currencyCode": "EUR"
+                                    }
+                                },
+                                "penalty": {
+                                    "value": 0,
+                                    "currencyCode": "EUR"
+                                },
+                                "refundMethodOptions": [
+                                    {
+                                        "id": "1052550456781-DEFAULT",
+                                        "paymentDetails": [
+                                            {
+                                                "paymentMethod": {
+                                                    "paymentType": "PaymentCard",
+                                                    "vendorCode": "CA",
+                                                    "cardNumber": "XXXXXXXXXXXX1096",
+                                                    "expiryDate": null
+                                                },
+                                                "amount": {
+                                                    "value": 97.48,
+                                                    "currencyCode": "EUR"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "refundProposalReferences": [],
+                "nonEligibilityReasons": [],
+                "dictionaries": {
+                    "currency": {
+                        "name": "EURO",
+                        "decimalPlaces": 2
+                    }
+                }
+            }
+        }
+    }
+}

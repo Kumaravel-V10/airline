@@ -1,0 +1,94 @@
+{
+  "examples": [
+    {
+      "input": "I need to book a flight from Helsinki to London next Friday",
+      "intent": "NEW_BOOKING",
+      "agent": "Create-Booking-Agent",
+      "entities": { "origin": "HEL", "destination": "LHR", "date": "next Friday" }
+    },
+    {
+      "input": "Can you pull up my booking? PNR is ABC123",
+      "intent": "RETRIEVE_BOOKING",
+      "agent": "Booking-Retrieval-Agent",
+      "entities": { "pnr": "ABC123" }
+    },
+    {
+      "input": "I need to change my name from Sarah Johnson to Sarah Williams on booking XYZ789",
+      "intent": "NAME_CHANGE",
+      "agent": "Name-Change-Agent",
+      "entities": { "pnr": "XYZ789", "old_name": "Sarah Johnson", "new_name": "Sarah Williams" }
+    },
+    {
+      "input": "My name is spelled wrong on the ticket. It says Jhon but should be John",
+      "intent": "NAME_CHANGE",
+      "agent": "Name-Change-Agent",
+      "entities": { "old_name": "Jhon", "new_name": "John", "change_type": "minor_correction" }
+    },
+    {
+      "input": "I want to cancel my booking 9DVWPJ and get a refund",
+      "intent": "CANCEL_AND_REFUND",
+      "agent": "RefundAgent",
+      "entities": { "pnr": "9DVWPJ", "action": "cancelAndRefund" }
+    },
+    {
+      "input": "Can I change my flight to the next day?",
+      "intent": "CHANGE_BOOKING",
+      "agent": "Change-Booking-Agent",
+      "entities": { "change_type": "date_change" }
+    },
+    {
+      "input": "My flight was cancelled, I need to be rebooked",
+      "intent": "DISRUPTION_REBOOKING",
+      "agent": "Disruption-Rebooking-Agent",
+      "entities": { "disruption_type": "cancellation" }
+    },
+    {
+      "input": "I want to add extra baggage to my booking",
+      "intent": "ANCILLARY_SERVICE",
+      "agent": "Ancillary-Sales-Agent",
+      "entities": { "service_type": "baggage" }
+    },
+    {
+      "input": "I need a wheelchair at the airport",
+      "intent": "SSR_REQUEST",
+      "agent": "Passenger-SSR-Agent",
+      "entities": { "ssr_type": "WCHR" }
+    },
+    {
+      "input": "I have a medical condition and need clearance to fly",
+      "intent": "MEDICAL_EXCEPTION",
+      "agent": "Medical-Exception-Agent",
+      "entities": { "request_type": "fit_to_fly" }
+    },
+    {
+      "input": "My payment didnt go through for the booking",
+      "intent": "PAYMENT_ISSUE",
+      "agent": "Payment-Agent",
+      "entities": { "issue_type": "payment_failure" }
+    },
+    {
+      "input": "Whats the status of my complaint case?",
+      "intent": "CASE_INQUIRY",
+      "agent": "Case-Management-Agent",
+      "entities": { "action": "status_check" }
+    },
+    {
+      "input": "Can you send me a confirmation email for my booking?",
+      "intent": "COMMUNICATION",
+      "agent": "Communication-Case-Summary-Agent",
+      "entities": { "comm_type": "confirmation_email" }
+    },
+    {
+      "input": "I want to select seat 12A on my flight",
+      "intent": "SEAT_SELECTION",
+      "agent": "Ancillary-Sales-Agent",
+      "entities": { "service_type": "seat", "seat_preference": "12A" }
+    },
+    {
+      "input": "Book me HEL to LHR with extra bag and seat 5C",
+      "intent": "NEW_BOOKING_WITH_ANCILLARY",
+      "agent": "Create-Booking-Agent then Ancillary-Sales-Agent",
+      "entities": { "origin": "HEL", "destination": "LHR", "services": ["baggage", "seat:5C"] }
+    }
+  ]
+}
