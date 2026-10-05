@@ -1779,3 +1779,800 @@ Azure AI Foundry -> Your Project -> Agents -> Select Agent -> Playground (Test t
 - [ ] **Phase 6**: Test each agent individually in Playground
 - [ ] **Phase 7**: Build Python orchestrator for agent-to-agent communication
 - [ ] **Phase 8**: Test end-to-end multi-agent flows
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+You are a Principal Software Architect, Staff Engineer, Cloud Architect, AI Architect, DevOps Architect, SRE Architect, Product Architect, and Enterprise Performance Engineering Expert.
+
+Your mission is to autonomously design and build a production-grade AI Performance Engineering Platform.
+
+You are expected to think like a startup CTO and create a scalable enterprise architecture.
+
+====================================================
+PRODUCT VISION
+====================================================
+
+Build a web-based platform that allows users to:
+
+1. Create and manage performance testing projects.
+2. Store application metadata and environments.
+3. Create, edit, save, clone, version, and execute K6 tests.
+4. Generate K6 tests using AI.
+5. Execute K6 tests directly from the platform.
+6. View real-time execution progress.
+7. Display live Azure resource metrics during execution.
+8. Display Application Insights metrics.
+9. Display Log Analytics metrics.
+10. Correlate test execution with infrastructure impact.
+11. Detect bottlenecks using AI.
+12. Generate root cause analysis.
+13. Recommend fixes for developers.
+14. Generate downloadable performance reports.
+15. Provide a unified observability dashboard.
+
+====================================================
+BUSINESS OBJECTIVE
+====================================================
+
+The platform should become a central performance engineering system where teams can:
+
+- Manage performance tests.
+- Execute tests.
+- Monitor systems.
+- Understand bottlenecks.
+- Improve applications.
+
+without leaving the platform.
+
+====================================================
+SYSTEM MODULES
+====================================================
+
+Design the application using the following modules:
+
+MODULE 1:
+Project Management
+
+MODULE 2:
+Application Knowledge Management
+
+MODULE 3:
+Test Management
+
+MODULE 4:
+K6 Execution Engine
+
+MODULE 5:
+Metrics Collection Engine
+
+MODULE 6:
+Azure Monitoring Integration
+
+MODULE 7:
+Grafana Dashboard Layer
+
+MODULE 8:
+AI Analysis Layer
+
+MODULE 9:
+Recommendation Engine
+
+MODULE 10:
+Reporting Engine
+
+====================================================
+MODULE 1
+PROJECT MANAGEMENT
+====================================================
+
+Create functionality for:
+
+Project Creation
+
+Project Update
+
+Project Deletion
+
+Environment Management
+
+Application Registration
+
+Store:
+
+Project Name
+Description
+Environment
+Tags
+
+Azure Subscription
+
+Resource Group
+
+App Service
+
+AKS
+
+Function Apps
+
+Application Insights
+
+Log Analytics Workspace
+
+Owner
+
+Business Unit
+
+Maintain audit history.
+
+====================================================
+MODULE 2
+APPLICATION KNOWLEDGE MANAGEMENT
+====================================================
+
+Purpose:
+
+Create knowledge about applications.
+
+User uploads:
+
+Swagger
+
+OpenAPI
+
+Documentation
+
+Postman Collections
+
+Application URLs
+
+Store as:
+
+Knowledge Base
+
+Design support for:
+
+Azure AI Search
+
+Vector Search
+
+Semantic Search
+
+Context Retrieval
+
+Knowledge Documents
+
+Application Overview
+
+Navigation Guide
+
+User Journeys
+
+API Catalog
+
+Performance Guide
+
+Monitoring Guide
+
+Knowledge Base will later be used by AI agents.
+
+====================================================
+MODULE 3
+TEST MANAGEMENT
+====================================================
+
+Create a complete test repository.
+
+Features:
+
+Create Script
+
+Edit Script
+
+Delete Script
+
+Clone Script
+
+Version Script
+
+Archive Script
+
+Script Categories:
+
+Load Testing
+
+Stress Testing
+
+Spike Testing
+
+Soak Testing
+
+UI Performance Testing
+
+Browser Testing
+
+Capabilities:
+
+Monaco Editor
+
+Syntax Highlighting
+
+Autocomplete
+
+Version History
+
+AI Suggestions
+
+Script Templates
+
+Folder Organization
+
+Script Search
+
+Script Compare
+
+Approval Workflow
+
+====================================================
+MODULE 4
+K6 EXECUTION ENGINE
+====================================================
+
+Design an execution system.
+
+Features:
+
+Run Test
+
+Stop Test
+
+Pause Test
+
+Resume Test
+
+Schedule Test
+
+Execution Queues
+
+Execution History
+
+Execution Logs
+
+Execution Status
+
+Support:
+
+Single Runner
+
+Distributed Runner
+
+Container Runner
+
+Design:
+
+Execution Service
+
+Runner Service
+
+Metrics Collector
+
+Result Processor
+
+Store:
+
+Run ID
+
+Status
+
+Start Time
+
+End Time
+
+Duration
+
+Result Summary
+
+====================================================
+MODULE 5
+LIVE METRICS ENGINE
+====================================================
+
+Collect K6 metrics in real-time.
+
+Metrics:
+
+Virtual Users
+
+Requests Per Second
+
+Throughput
+
+P50
+
+P90
+
+P95
+
+P99
+
+Average Response Time
+
+Error Rate
+
+HTTP Errors
+
+Transaction Success
+
+Transaction Failure
+
+Create websocket-based streaming.
+
+Refresh every few seconds.
+
+====================================================
+MODULE 6
+AZURE MONITORING INTEGRATION
+====================================================
+
+Integrate:
+
+Azure Monitor
+
+Application Insights
+
+Log Analytics
+
+AKS Insights
+
+Container Insights
+
+App Service Metrics
+
+Function App Metrics
+
+Azure SQL Metrics
+
+Redis Metrics
+
+Metrics:
+
+CPU
+
+Memory
+
+Network
+
+Disk
+
+Connections
+
+Request Rate
+
+Response Time
+
+Dependency Failures
+
+Exceptions
+
+Availability
+
+Collect continuously during test execution.
+
+====================================================
+MODULE 7
+UNIFIED DASHBOARD
+====================================================
+
+Build Grafana-style dashboards.
+
+Dashboard Types:
+
+Executive Dashboard
+
+Project Dashboard
+
+Performance Dashboard
+
+Infrastructure Dashboard
+
+Application Dashboard
+
+Dependency Dashboard
+
+Resource Dashboard
+
+Real Time Test Dashboard
+
+Features:
+
+Interactive Graphs
+
+Zoom
+
+Filtering
+
+Environment Selection
+
+Time Range Selection
+
+Multi-resource comparison
+
+Embed Grafana panels if needed.
+
+====================================================
+MODULE 8
+AI AGENT LAYER
+====================================================
+
+Design the following agents.
+
+Agent 1:
+
+Knowledge Retrieval Agent
+
+Responsibilities:
+
+Retrieve context from AI Search
+
+Understand application
+
+Provide context
+
+Agent 2:
+
+K6 Generation Agent
+
+Responsibilities:
+
+Generate K6 tests
+
+Generate browser tests
+
+Generate scenarios
+
+Agent 3:
+
+Execution Monitoring Agent
+
+Responsibilities:
+
+Track tests
+
+Analyze behavior
+
+Identify anomalies
+
+Agent 4:
+
+Resource Impact Agent
+
+Responsibilities:
+
+Determine affected Azure resources
+
+Correlate load with infrastructure
+
+Agent 5:
+
+RCA Agent
+
+Responsibilities:
+
+Root Cause Analysis
+
+Correlate:
+
+K6 Metrics
+
+Application Metrics
+
+Infrastructure Metrics
+
+Dependencies
+
+Agent 6:
+
+Recommendation Agent
+
+Responsibilities:
+
+Suggest code fixes
+
+Suggest infrastructure fixes
+
+Suggest scaling improvements
+
+Agent 7:
+
+Report Agent
+
+Responsibilities:
+
+Generate execution reports
+
+Generate RCA reports
+
+Generate executive reports
+
+====================================================
+MODULE 9
+AI ANALYSIS
+====================================================
+
+Analyze:
+
+Performance Issues
+
+Infrastructure Bottlenecks
+
+Database Bottlenecks
+
+Memory Issues
+
+CPU Spikes
+
+Thread Pool Exhaustion
+
+Connection Pool Exhaustion
+
+Queue Backlogs
+
+Dependency Failures
+
+Output:
+
+Issue
+
+Impact
+
+Affected Resource
+
+Confidence
+
+Recommendation
+
+Expected Improvement
+
+Priority
+
+====================================================
+MODULE 10
+REPORTING
+====================================================
+
+Generate:
+
+Performance Report
+
+Executive Summary
+
+SLA Report
+
+Trend Report
+
+Capacity Report
+
+RCA Report
+
+Formats:
+
+PDF
+
+Word
+
+Excel
+
+HTML
+
+====================================================
+TECHNOLOGY STACK
+====================================================
+
+Frontend:
+
+Next.js
+React
+TypeScript
+Tailwind
+
+Backend:
+
+.NET 8 Web API
+
+Database:
+
+PostgreSQL
+
+Caching:
+
+Redis
+
+AI:
+
+Claude Sonnet
+Azure OpenAI
+
+Knowledge:
+
+Azure AI Search
+
+Messaging:
+
+Azure Service Bus
+
+Monitoring:
+
+Azure Monitor
+
+Application Insights
+
+Grafana
+
+Prometheus
+
+Execution:
+
+K6
+
+Container Platform:
+
+Azure Container Apps
+
+Authentication:
+
+Microsoft Entra ID
+
+====================================================
+DATABASE DESIGN
+====================================================
+
+Generate complete database schema.
+
+Include:
+
+Projects
+
+Environments
+
+Scripts
+
+ScriptVersions
+
+Runs
+
+Metrics
+
+AzureMetrics
+
+Findings
+
+Recommendations
+
+Reports
+
+AgentExecutions
+
+AuditLogs
+
+Users
+
+Roles
+
+Permissions
+
+====================================================
+API DESIGN
+====================================================
+
+Generate complete REST APIs.
+
+Provide:
+
+Endpoints
+
+Request Models
+
+Response Models
+
+Authorization
+
+Validation Rules
+
+Error Handling
+
+====================================================
+UI DESIGN
+====================================================
+
+Generate:
+
+Information Architecture
+
+Navigation Structure
+
+Wireframes
+
+Page Definitions
+
+Dashboard Layouts
+
+Forms
+
+Tables
+
+Filters
+
+Charts
+
+Component Catalog
+
+====================================================
+DEVOPS DESIGN
+====================================================
+
+Generate:
+
+Microservice Architecture
+
+Repository Structure
+
+CI/CD Pipelines
+
+Terraform Structure
+
+Docker Strategy
+
+Container Apps Design
+
+Environment Strategy
+
+====================================================
+DELIVERABLES
+====================================================
+
+Produce the following:
+
+1. Product Requirement Document
+2. System Architecture Document
+3. Functional Specification
+4. Non-Functional Requirements
+5. Database Design Document
+6. API Specification
+7. Frontend Architecture
+8. Backend Architecture
+9. Agent Architecture
+10. Azure Architecture
+11. Grafana Architecture
+12. Security Architecture
+13. Deployment Architecture
+14. Sequence Diagrams
+15. Data Flow Diagrams
+16. Sprint Breakdown
+17. Development Roadmap
+18. MVP Definition
+19. Release Plan
+20. Source Code Implementation Plan
+
+Generate implementation-ready output.
+
+Do not provide high-level concepts only.
+Provide exact modules, services, APIs, database tables, UI screens, workflows, agent responsibilities, deployment architecture, and engineering tasks necessary for developers to begin implementation immediately.
